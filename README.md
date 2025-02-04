@@ -1,99 +1,51 @@
-# Jupiter Token Agent Example
+# Noves AI Agent
 
-This repository demonstrates how to create an agent that integrates with the FXN server architecture to provide token matching capabilities using Jupiter's token data. It serves as a reference implementation for teams looking to build their own data agents.
+This repository demonstrates how to create an agent that integrates with the FXN protocol to provide token price and wallet balance data using Noves' APIs. It serves as a reference implementation for teams looking to build their own data agents.
 
 ## Overview
 
-The Jupiter Token Agent:
+The Noves AI Agent:
 
 1. Makes service offers to the FXN server at regular intervals
-2. Uses LangChain and GPT-4 to intelligently match discussion topics to tokens
-3. Fetches token data from Jupiter's API with smart caching
+2. Provides real-time token price data across multiple blockchains
+3. Fetches wallet balance information with USD valuations
 4. Follows the FXN protocol's ServiceOffer and AsyncResponse patterns
-5. Provides confidence scores and rationales for matches
+5. Implements secure message signing and verification
 
 ## Features
 
-- Intelligent topic-to-token matching using LangChain
-- Support for all Jupiter tokens with filtering for quality
-- Smart caching of token data with TTL
-- Proper error handling and response formatting
+- Real-time token price lookups across Ethereum, Solana, and Polygon
+- Detailed wallet balance information with USD value calculations
+- Smart error handling and response formatting
 - TypeScript implementation with full type safety
-- Signature verification for security
+- Secure message signing for all communications
+- Configurable offer intervals
 
 ## Input/Output Format
 
-One of the key aspects of FXN agents is clearly specifying their input and output formats. This allows other AI agents to understand how to interact with your service.
+The agent accepts two types of requests:
 
-The Jupiter Token Agent specifies its formats in the configuration:
-
-```typescript
-const agentConfig: LocalAgentConfiguration = {
-  id: process.env.WALLET_PUBLIC_KEY,
-  name: 'Jupiter Token Agent',
-  version: '1.0.0',
-  technical: {
-    model: {
-      provider: 'openai',
-      name: 'gpt-4',
-      temperature: 0.3,
-      maxTokens: 1000,
-      apiKey: process.env.OPENAI_API_KEY
-    },
-    capabilities: ['topic_to_token_matching'],
-    input_format: {
-      type: 'json',
-      properties: {
-        topics: {
-          type: 'array',
-          description: 'List of discussion topics to analyze for token mentions',
-          items: {
-            type: 'string'
-          },
-          required: true
-        }
-      }
-    },
-    output_format: {
-      type: 'json',
-      properties: {
-        matches: {
-          type: 'array',
-          description: 'List of token matches found in topics',
-          items: {
-            type: 'object',
-            properties: {
-              topic: {
-                type: 'string',
-                description: 'The original topic text'
-              },
-              ticker: {
-                type: 'string',
-                description: 'The matched token symbol'
-              },
-              confidence: {
-                type: 'number',
-                description: 'Confidence score between 0 and 1'
-              },
-              rationale: {
-                type: 'string',
-                description: 'Explanation for why this match was made'
-              }
-            }
-          },
-          required: true
-        }
-      }
-    }
+### Token Price Request
+```json
+{
+  "type": "token_price",
+  "params": {
+    "token": "ETH",
+    "blockchain": "ethereum"
   }
-};
+}
 ```
 
-These format specifications are crucial as they:
-1. Allow other AI agents to understand how to structure requests
-2. Enable automatic validation of inputs and outputs
-3. Provide clear documentation of the service interface
-4. Help LLMs understand how to process the data
+### Wallet Balance Request
+```json
+{
+  "type": "wallet_balance",
+  "params": {
+    "wallet": "0x1234...5678",
+    "blockchain": "ethereum"
+  }
+}
+```
 
 ## Getting Started
 
@@ -105,39 +57,27 @@ npm install
 2. Set up environment variables:
 Copy `.env.example` to `.env` and fill in:
 ```
+# OpenAI API Key for the LLM
 OPENAI_API_KEY=your_openai_api_key
+
+# FXN Protocol Configuration
 WALLET_PRIVATE_KEY=your_wallet_private_key
 WALLET_PUBLIC_KEY=your_wallet_public_key
 RPC_URL=your_rpc_url
 MAINNET_RPC_URL=your_mainnet_rpc_url
+
+# Noves API Configuration
+NOVES_API_KEY=your_noves_api_key
+NOVES_PRICE_API=https://api.noves.com/v1/prices
+NOVES_BALANCE_API=https://api.noves.com/v1/balances
+
+# Agent Configuration
+OFFER_INTERVAL_MS=30000  # 30 seconds by default
 ```
 
 3. Run the example:
 ```bash
 npm start
-```
-
-## Agent Configuration
-
-The agent requires a configuration object that defines its identity and capabilities:
-
-```typescript
-const agentConfig: LocalAgentConfiguration = {
-  id: process.env.WALLET_PUBLIC_KEY,
-  name: 'Jupiter Token Agent',
-  version: '1.0.0',
-  technical: {
-    model: {
-      provider: 'openai',
-      name: 'gpt-4',
-      temperature: 0.3,
-      maxTokens: 1000,
-      apiKey: process.env.OPENAI_API_KEY
-    },
-    capabilities: ['topic_to_token_matching'],
-    // ... other config options
-  }
-};
 ```
 
 ## Service Offers
@@ -147,94 +87,93 @@ The agent makes service offers to the FXN server:
 ```typescript
 {
   serviceType: ServiceType.DATA,
-  serviceName: "jupiter_token_matching",
+  serviceName: "noves_ai",
   capabilities: [
-    "topic_to_token_matching",
-    "token_verification",
-    "confidence_scoring"
+    "token_price_lookup",
+    "wallet_balance_lookup"
   ],
   metadata: {
-    supported_inputs: ["topics"],
+    supported_blockchains: ["ethereum", "solana", "polygon"],
     api_version: "1.0.0",
-    min_confidence_threshold: 0.6
+    supported_request_types: ["token_price", "wallet_balance"]
   }
 }
 ```
 
 ## Response Format
 
-The agent returns matches in this format:
-
+### Token Price Response
 ```typescript
 {
   serviceType: ServiceType.DATA,
-  serviceName: "jupiter_token_matching",
+  serviceName: "noves_price_data",
   requestId: string,
   response: {
     status: 'success',
     data: {
-      matches: [
-        {
-          topic: string,
-          ticker: string,
-          confidence: number,
-          rationale: string
-        }
-      ],
-      metadata: {
-        timestamp: string,
-        totalTopics: number,
-        matchedTopics: number,
-        tokensAnalyzed: number
-      }
+      price: number,
+      timestamp: string,
+      blockchain: string,
+      token: string
     }
   }
 }
 ```
 
-## Token Filtering
-
-The agent applies strict filtering to Jupiter tokens:
-- Only includes verified tokens or those with high daily volume
-- Filters out tokens with excessively long names
-- Prioritizes tokens by verification status and volume
-- Maintains a cached list of top 100 tokens
-
-## CLI Interface
-
-The example includes a CLI interface for testing:
-- Enter topics one per line
-- Press Enter twice to process topics
-- See matches with confidence scores and rationales
-- Type 'exit' to quit
+### Wallet Balance Response
+```typescript
+{
+  serviceType: ServiceType.DATA,
+  serviceName: "noves_balance_data",
+  requestId: string,
+  response: {
+    status: 'success',
+    data: {
+      balances: [{
+        token: string,
+        amount: number,
+        value_usd?: number
+      }],
+      wallet: string,
+      blockchain: string,
+      timestamp: string
+    }
+  }
+}
+```
 
 ## Error Handling
 
-The agent includes comprehensive error handling:
-- Signature verification
-- Token data fetch failures
-- LLM processing errors
+The agent includes comprehensive error handling for:
+- API request failures
+- Invalid request parameters
 - Network communication issues
+- Message signing/verification errors
+
+## Project Structure
+
+```
+├── agent.ts           # Main agent implementation
+├── types.ts           # TypeScript type definitions
+├── example.ts         # Example usage and testing
+├── utils/
+│   └── signingUtils.ts # Message signing utilities
+├── .env.example       # Environment variables template
+└── tsconfig.json      # TypeScript configuration
+```
 
 ## Getting Registered with FXN
 
-Before your agent can participate in the SuperSwarm™, you need to register it with FXN. Here's how:
+Before your agent can participate in the FXN network, you need to register it. Follow these steps:
 
 1. Ensure you have:
-   - A Solana wallet configured for devnet (Phantom or Solflare)
-   - Test FXN tokens (address: `34dcPojKodMA2GkH2E9jjNi3gheweipGDaUAgoX73dK8`)
+   - A Solana wallet with SOL for transactions
+   - Your agent's public/private key pair
 
 2. Register your agent:
-   - Visit the [FXN SuperSwarm dashboard](https://docs.fxn.world/developers/quick-start)
-   - Click "Register Agent"
-   - Complete the registration form
-   - Pay the registration fee with devFXN
-
-3. Configure subscription handling:
-   - Set whether to allow all subscriptions or require approval
-   - Set up your endpoint to receive POST requests from subscribers
-
-For detailed registration instructions and SDK documentation, visit the [FXN Quick Start Guide](https://docs.fxn.world/developers/quick-start).
+   - Visit the [FXN documentation](https://docs.fxn.world/developers/quick-start)
+   - Follow the registration process
+   - Configure your agent's endpoint
 
 ## Contributing
 

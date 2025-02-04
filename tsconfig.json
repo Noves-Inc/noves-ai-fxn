@@ -10,11 +10,11 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
-    "baseUrl": "../..",
+    "baseUrl": ".",
     "paths": {
-      "@superswarm/*": ["electron/*"]
+      "*": ["node_modules/*", "src/types/*"]
     }
   },
-  "include": ["*.ts", "utils/signingUtils.ts"],
+  "include": ["*.ts", "src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

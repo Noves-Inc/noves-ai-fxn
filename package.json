@@ -1,28 +1,32 @@
 {
-  "name": "jupiter-token-agent",
+  "name": "noves-ai-agent",
   "version": "1.0.0",
-  "description": "Example agent implementation for the FXN server that provides Jupiter token data",
+  "description": "Noves AI Agent for FXN protocol",
   "main": "agent.ts",
   "scripts": {
     "build": "tsc",
-    "start": "ts-node -r tsconfig-paths/register example.ts",
+    "start": "ts-node example.ts",
+    "dev": "ts-node -r tsconfig-paths/register example.ts",
     "test": "jest"
   },
   "dependencies": {
     "@langchain/core": "^0.1.48",
     "@langchain/openai": "^0.0.21",
     "axios": "^1.6.7",
+    "bs58": "^5.0.0",
     "dotenv": "^16.4.5",
-    "zod": "^3.22.4",
-    "fxn-protocol-sdk": "https://github.com/Oz-Networks/fxn-protocol-sdk#main"
+    "fxn-protocol-sdk": "https://github.com/Oz-Networks/fxn-protocol-sdk#main",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/node": "^20.11.24",
-    "typescript": "^5.3.3",
-    "ts-node": "^10.9.2",
-    "jest": "^29.7.0",
+    "@types/bs58": "^4.0.4",
     "@types/jest": "^29.5.12",
-    "ts-jest": "^29.1.2"
+    "@types/node": "^20.11.24",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.3.3"
   },
   "author": "",
   "license": "MIT"

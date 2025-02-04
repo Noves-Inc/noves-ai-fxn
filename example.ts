@@ -1,9 +1,96 @@
 import { NovesAIAgent } from './agent';
 import { config } from 'dotenv';
-import { LocalAgentConfiguration, ModelProvider } from './types';
+import { LocalAgentConfiguration, ModelProvider, Schema, SchemaProperty } from './types';
 
 // Load environment variables
 config();
+
+// Define schema properties
+const typeProperty: SchemaProperty = {
+  type: 'string',
+  description: 'Type of data request',
+  enum: ['token_price', 'wallet_balance']
+};
+
+const paramsProperties: Record<string, SchemaProperty> = {
+  token: {
+    type: 'string',
+    description: 'Token symbol or address'
+  },
+  wallet: {
+    type: 'string',
+    description: 'Wallet address'
+  },
+  blockchain: {
+    type: 'string',
+    description: 'Blockchain network'
+  }
+};
+
+const inputFormat: Schema = {
+  type: 'object',
+  properties: {
+    type: typeProperty,
+    params: {
+      type: 'object',
+      description: 'Request parameters',
+      properties: paramsProperties
+    }
+  },
+  required: ['type', 'params']
+};
+
+const statusProperty: SchemaProperty = {
+  type: 'string',
+  description: 'Response status',
+  enum: ['success', 'error']
+};
+
+const balanceItemProperties: Record<string, SchemaProperty> = {
+  token: {
+    type: 'string',
+    description: 'Token symbol or address'
+  },
+  amount: {
+    type: 'number',
+    description: 'Token amount'
+  },
+  value_usd: {
+    type: 'number',
+    description: 'USD value of token balance'
+  }
+};
+
+const outputFormat: Schema = {
+  type: 'object',
+  properties: {
+    status: statusProperty,
+    data: {
+      type: 'object',
+      description: 'Response data',
+      properties: {
+        price: {
+          type: 'number',
+          description: 'Token price in USD'
+        },
+        balances: {
+          type: 'array',
+          description: 'Array of token balances',
+          items: {
+            type: 'object',
+            description: 'Token balance information',
+            properties: balanceItemProperties
+          }
+        }
+      }
+    },
+    error: {
+      type: 'string',
+      description: 'Error message if status is error'
+    }
+  },
+  required: ['status']
+};
 
 // Create agent configuration
 const agentConfig: LocalAgentConfiguration = {
@@ -26,42 +113,9 @@ const agentConfig: LocalAgentConfiguration = {
       apiKey: process.env.OPENAI_API_KEY
     },
     capabilities: ['token_price_lookup', 'wallet_balance_lookup'],
-    input_format: {
-      type: 'object',
-      properties: {
-        type: {
-          type: 'string',
-          enum: ['token_price', 'wallet_balance'],
-          description: 'Type of data request'
-        },
-        params: {
-          type: 'object',
-          properties: {
-            token: { type: 'string' },
-            wallet: { type: 'string' },
-            blockchain: { type: 'string' }
-          }
-        }
-      },
-      required: ['type', 'params']
-    },
-    output_format: {
-      type: 'object',
-      properties: {
-        status: {
-          type: 'string',
-          enum: ['success', 'error']
-        },
-        data: {
-          oneOf: [
-            { $ref: '#/definitions/TokenPrice' },
-            { $ref: '#/definitions/WalletBalance' }
-          ]
-        },
-        error: { type: 'string' }
-      },
-      required: ['status']
-    }
+    system_prompt: 'You are a blockchain data provider specialized in token prices and wallet balances.',
+    input_format: inputFormat,
+    output_format: outputFormat
   }
 };
 

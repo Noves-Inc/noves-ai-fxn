@@ -182,6 +182,105 @@ export class NovesAIAgent {
     };
   }
 
+  private async makeAndSendOffers() {
+    try {
+      // Get all active subscribers
+      console.log('[NovesAIAgent] Getting subscribers with agent ID:', this.config.id);
+      const subscribers = await this.fxnClient.getSubscribers();
+      console.log('[NovesAIAgent] Found subscribers:', subscribers);
+
+      const serviceOffer = this.makeServiceOffer();
+      console.log('[NovesAIAgent] Created service offer:', {
+        serviceType: serviceOffer.serviceType,
+        serviceName: serviceOffer.serviceName,
+        capabilities: serviceOffer.capabilities
+      });
+
+      // Create broadcast payload following FxnRequestBody schema
+      const broadcastPayload: FxnRequestBody = {
+        type: RequestType.OFFER,
+        publicKey: this.config.id,
+        signature: '', // FxnClient will add this
+        payload: serviceOffer
+      };
+
+      console.log('[NovesAIAgent] Broadcasting payload:', JSON.stringify(broadcastPayload, null, 2));
+
+      // Broadcast offer to all subscribers
+      const response = await this.fxnClient.broadcastToSubscribers(
+        broadcastPayload,
+        subscribers
+      );
+
+      console.log('[NovesAIAgent] Broadcast response:', response);
+
+      // Handle responses
+      for (const result of response) {
+        if (result.status === 'fulfilled' && result.value) {
+          try {
+            // Log the raw response before parsing
+            const rawText = await result.value.text();
+            console.log('[NovesAIAgent] Raw response text:', rawText);
+
+            // Try to parse if it looks like JSON
+            if (rawText.trim().startsWith('{')) {
+              const responseData = JSON.parse(rawText);
+              console.log('[NovesAIAgent] Parsed response data:', responseData);
+              await this.handleOfferResponse(responseData);
+            } else {
+              console.error('[NovesAIAgent] Received non-JSON response:', rawText);
+            }
+          } catch (error) {
+            console.error('[NovesAIAgent] Error handling subscriber response:', {
+              error: error instanceof Error ? error.message : 'Unknown error',
+              stack: error instanceof Error ? error.stack : undefined,
+              result: result.value
+            });
+          }
+        } else if (result.status === 'rejected') {
+          console.error('[NovesAIAgent] Broadcast promise rejected:', result.reason);
+        }
+      }
+    } catch (error) {
+      console.error('[NovesAIAgent] Error making service offers:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+    }
+  }
+
+  private async handleOfferResponse(response: ServiceOfferResponse) {
+    try {
+      if (response.requirement) {
+        // Process the requirement.payload directly since it contains the request data
+        const asyncResponse: AsyncResponse = await this.processRequest(response.requirement);
+
+        // Create response payload following FxnRequestBody schema
+        const responsePayload: FxnRequestBody = {
+          type: RequestType.RESPONSE,
+          publicKey: this.config.id,
+          signature: '', // Will be handled by fxnClient
+          payload: asyncResponse
+        };
+
+        console.log('[NovesAIAgent] Preparing response payload:', responsePayload);
+
+        if (response.requirement.responseEndpoint === '/') {
+          console.log('[NovesAIAgent] Skipping POST - invalid endpoint "/"');
+          return;
+        }
+
+        // Use fxnClient to send the response
+        await this.fxnClient.sendResponse(
+          responsePayload,
+          response.requirement.responseEndpoint
+        );
+      }
+    } catch (error) {
+      console.error('[NovesAIAgent] Error in handleOfferResponse:', error);
+    }
+  }
+
   // Helper methods
   public getId(): string {
     return this.config.id;
