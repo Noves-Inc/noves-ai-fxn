@@ -46,6 +46,7 @@ export class NovesAIAgent {
   private readonly NOVES_PRICE_API: string;
   private readonly NOVES_BALANCE_API: string;
   private readonly API_KEY: string;
+  private readonly BALANCES_API_KEY: string;
 
   constructor(config: LocalAgentConfiguration) {
     this.config = config;
@@ -53,7 +54,7 @@ export class NovesAIAgent {
     this.NOVES_PRICE_API = process.env.NOVES_PRICE_API!;
     this.NOVES_BALANCE_API = process.env.NOVES_BALANCE_API!;
     this.API_KEY = process.env.NOVES_API_KEY!;
-
+    this.BALANCES_API_KEY = process.env.NOVES_BALANCE_API_KEY!;
     const fxnConfig = {
       rpcUrl: process.env.RPC_URL!,
       walletPrivateKey: process.env.WALLET_PRIVATE_KEY!,
@@ -81,16 +82,27 @@ export class NovesAIAgent {
 
   private async getTokenPrice(token: string, blockchain: string): Promise<TokenPrice> {
     try {
-      const response = await axios.get(`${this.NOVES_PRICE_API}`, {
-        params: { token, blockchain },
-        headers: { 'X-API-KEY': this.API_KEY }
+      const response = await axios.get(`${this.NOVES_PRICE_API}/evm/${blockchain}/price/${token}`, {
+        headers: { 
+          'accept': 'application/json',
+          'apiKey': this.API_KEY
+        }
       });
       
       return {
-        price: response.data.price,
+        price: Number(response.data.price.amount),
         timestamp: new Date().toISOString(),
-        blockchain,
-        token
+        blockchain: response.data.chain,
+        token: response.data.token.address,
+        symbol: response.data.token.symbol,
+        name: response.data.token.name,
+        priceStatus: response.data.priceStatus,
+        priceType: response.data.priceType,
+        pricedBy: {
+          exchange: response.data.pricedBy.exchange.name,
+          liquidity: response.data.pricedBy.liquidity,
+          poolAddress: response.data.pricedBy.poolAddress
+        }
       };
     } catch (error) {
       console.error('Error fetching token price:', error);
@@ -99,18 +111,78 @@ export class NovesAIAgent {
   }
 
   private async getWalletBalance(wallet: string, blockchain: string): Promise<WalletBalance> {
+    blockchain = blockchain.toLowerCase() + "-mainnet";
     try {
-      const response = await axios.get(`${this.NOVES_BALANCE_API}`, {
-        params: { wallet, blockchain },
-        headers: { 'X-API-KEY': this.API_KEY }
+      // Prepare request data for getting token balances
+      const balanceData = JSON.stringify({
+        jsonrpc: "2.0",
+        method: "alchemy_getTokenBalances",
+        params: [wallet], // Simplified params to get all token balances
+        id: 42
       });
 
+      // Make request to get token balances
+      const balanceResponse = await axios({
+        method: 'post',
+        url: `https://${blockchain}.g.alchemy.com/v2/${this.BALANCES_API_KEY}`,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        data: balanceData
+      });
+
+      // Filter out zero balances and format balances
+      const nonZeroBalances = balanceResponse.data.result.tokenBalances
+        .filter((token: any) => token.tokenBalance !== '0x0000000000000000000000000000000000000000000000000000000000000000')
+        .map((token: any) => {
+          // Convert hex balance to decimal
+          const balanceHex = token.tokenBalance;
+          const balanceDecimal = parseInt(balanceHex, 16);
+          
+          return {
+            token: token.contractAddress,
+            amount: balanceDecimal
+          };
+        });
+
+      // Get metadata for each token
+      const balancePromises = nonZeroBalances.map(async (balance: any) => {
+        const metadataData = JSON.stringify({
+          jsonrpc: "2.0",
+          method: "alchemy_getTokenMetadata",
+          params: [balance.token],
+          id: 42
+        });
+
+        const metadataResponse = await axios({
+          method: 'post',
+          url: `https://${blockchain}.g.alchemy.com/v2/${this.BALANCES_API_KEY}`,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          data: metadataData
+        });
+
+        const metadata = metadataResponse.data.result;
+        const adjustedBalance = balance.amount / Math.pow(10, metadata.decimals);
+
+        return {
+          token: balance.token,
+          amount: Number(adjustedBalance.toFixed(4)),
+          symbol: metadata.symbol,
+          name: metadata.name
+        };
+      });
+
+      const formattedBalances = await Promise.all(balancePromises);
+
       return {
-        balances: response.data.balances,
+        balances: formattedBalances,
         wallet,
         blockchain,
         timestamp: new Date().toISOString()
       };
+
     } catch (error) {
       console.error('Error fetching wallet balance:', error);
       throw error;
@@ -172,7 +244,7 @@ export class NovesAIAgent {
         "wallet_balance_lookup"
       ],
       metadata: {
-        supported_blockchains: ["ethereum", "solana", "polygon"],
+        supported_blockchains: ["ethereum", "polygon", "arbitrum", "base", "avalanche", "bnb", "fantom", "gnosis", "optimism"],
         api_version: "1.0.0",
         supported_request_types: ["token_price", "wallet_balance"],
         input_format: this.config.technical.input_format,

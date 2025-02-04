@@ -15,7 +15,7 @@ const typeProperty: SchemaProperty = {
 const paramsProperties: Record<string, SchemaProperty> = {
   token: {
     type: 'string',
-    description: 'Token symbol or address'
+    description: 'Token address'
   },
   wallet: {
     type: 'string',
@@ -49,7 +49,7 @@ const statusProperty: SchemaProperty = {
 const balanceItemProperties: Record<string, SchemaProperty> = {
   token: {
     type: 'string',
-    description: 'Token symbol or address'
+    description: 'Token address'
   },
   amount: {
     type: 'number',
@@ -107,7 +107,7 @@ const agentConfig: LocalAgentConfiguration = {
   technical: {
     model: {
       provider: 'openai' as ModelProvider,
-      name: process.env.MODEL_NAME || 'gpt-4',
+      name: process.env.MODEL_NAME || 'gpt-4o-mini',
       temperature: 0.3,
       maxTokens: 1000,
       apiKey: process.env.OPENAI_API_KEY
@@ -133,8 +133,8 @@ async function main() {
     payload: {
       type: 'token_price',
       params: {
-        token: 'ETH',
-        blockchain: 'ethereum'
+        token: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+        blockchain: 'eth'
       }
     }
   };
@@ -145,8 +145,8 @@ async function main() {
     payload: {
       type: 'wallet_balance',
       params: {
-        wallet: '0x1234...5678',
-        blockchain: 'ethereum'
+        wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+        blockchain: 'eth'
       }
     }
   };

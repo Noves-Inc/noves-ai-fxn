@@ -117,6 +117,15 @@ export interface TokenPrice {
   timestamp: string;
   blockchain: string;
   token: string;
+  symbol: string;
+  name: string;
+  priceStatus: string;
+  priceType: string;
+  pricedBy: {
+    exchange: string;
+    liquidity: number;
+    poolAddress: string;
+  };
 }
 
 export interface TokenBalance {
