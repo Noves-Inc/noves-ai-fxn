@@ -1,27 +1,22 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: tvl-indexer
+  name: fxn-ai-agent
   namespace: noves-prod-ns
 data:
-  NOVES_RPC_URI: http://rpc-load-balancer
-  CONFIG_REPO_NOVES_URI: http://config-repo
-  TOKEN_METADATA_URI: http://token-metadata
-  TRANSLATE_URI: http://translate.noves.fi
-  
   # OpenAI Configuration
-  OPENAI_API_KEY: ""  # To be set in production
+  OPENAI_API_KEY: "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"
   
   # FXN Protocol Configuration
-  WALLET_PRIVATE_KEY: ""  # To be set in production
-  WALLET_PUBLIC_KEY: ""  # To be set in production
-  RPC_URL: ""  # To be set in production
-  MAINNET_RPC_URL: ""  # To be set in production
+  WALLET_PRIVATE_KEY: "2wWTUcdzg9JnyXyw33hUqmKzTQnn6B8suoQrnm9bAuBEWGiaA7Car8Se3BobcHL9LT8ZojZ7AYgvhWipeJRXWsR7"
+  WALLET_PUBLIC_KEY: "FCN6FcHN79ywy7D2JLMhrg44scoZY5jWvTRhLSoi3AXw"
+  RPC_URL: "https://solana-mainnet.wallet.brave.com/"
+  MAINNET_RPC_URL: "https://solana-mainnet.wallet.brave.com/"
   
   # Noves API Configuration
-  NOVES_API_KEY: ""  # To be set in production
-  NOVES_PRICE_API: "https://api.noves.com/v1/prices"
-  NOVES_BALANCE_API: "https://api.noves.com/v1/balances"
+  NOVES_API_KEY: "YjdxQk3fOOvpVfsDUE"  # To be set in production
+  NOVES_PRICE_API: "https://pricing.noves.com"
+  NOVES_BALANCE_API_KEY: "OH3PEknvaRt_x1zphYpM7gliaAZM0E6f"  # To be set in production
   
   # Agent Configuration
   OFFER_INTERVAL_MS: "30000"
