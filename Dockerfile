@@ -29,3 +29,4 @@ USER nodeuser
 
 # Start the application
 CMD ["npm", "start"] 
+
