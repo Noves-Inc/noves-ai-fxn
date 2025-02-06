@@ -4,17 +4,20 @@ FROM node:20-slim
 # Set working directory
 WORKDIR /app
 
-# Install dependencies first (for better caching)
+# Copy package files
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
-# Copy project files
+# Copy project files and .env
 COPY . .
+COPY .env.example .env
 
 # Build TypeScript files
 RUN npm run build
 
-# Set environment variables from .env file at runtime
+# Set environment variables
 ENV NODE_ENV=production
 
 # Expose any necessary ports (if needed)
